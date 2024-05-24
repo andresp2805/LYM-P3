@@ -1,0 +1,526 @@
+using gold.**
+
+toSet(C) :=  {x|  x in C}
+
+///====   mini Parser===
+
+function createParser(A):IPushdownAutomaton begin
+	// defs
+	dfv := {"dfv","dfvv","dfvn"}
+	defn := {"defn","defnv","defnvs"}
+	defs := dfv ∪ defn
+	// Commands
+	eq := {"eq","eqn","en"}
+	fm := {"fm","fp"}
+	mo := {"mo","mn"}
+	sk := {"sk","sn"}
+	tr := {"tr","tn"}
+	fc := {"fc","fn"}
+	puc := {"puc","px","pn"}
+	md := {"md","mdn","mdd"}
+	rd := {"rd","rdd"}
+	mf := {"mf","mfn","mfd"}
+	nu := {"nu"}
+	comm := eq∪fm∪mo∪sk∪tr∪fc∪puc∪md∪rd∪mf∪nu
+	// RepeatTimes and loop
+	// command
+	req := {"req","reqn","ren"}
+	rfm := {"rfm","rfp"}
+	rmo := {"rmo","rmn"}
+	rsk := {"rsk","rsn"}
+	rtr := {"rtr","rtn"}
+	rfc := {"rfc","rfn"}
+	rpuc := {"rpuc","rpx","rpn"}
+	rmd := {"rmd","rmdn","rmdd"}
+	rrd := {"rrd","rrdd"}
+	rmf := {"rmf","rmfn","rmfd"}
+	rnu := {"rnu"}
+	// conditional
+	lfac := {"lfac","lfacd"}
+	lblo := {"lblo"}
+	lcp := {"lcp","lcpx","lcpn"}
+	lcnm := {"lcnm","lcnmd"}
+	lz := {"lz","lzn"}
+	lnot := {"lnot"}
+	rep := lfac ∪ lblo ∪ lcp ∪ lcnm ∪ lz ∪ lnot ∪ {"L"} ∪ {"T","Tn","Tf"}∪req∪rfm∪rmo∪rsk∪rtr∪rfc∪rpuc∪rmd∪rrd∪rmf∪rnu
+	// if  conditional
+	// command 1
+	c1eq := {"c1eq","c1eqn","c1en"}
+	c1fm := {"c1fm","c1fp"}
+	c1mo := {"c1mo","c1mn"}
+	c1sk := {"c1sk","c1sn"}
+	c1tr := {"c1tr","c1tn"}
+	c1fc := {"c1fc","c1fn"}
+	c1puc := {"c1puc","c1px","c1pn"}
+	c1md := {"c1md","c1mdn","c1mdd"}
+	c1rd := {"c1rd","c1rdd"}
+	c1mf := {"c1mf","c1mfn","c1mfd"}
+	c1nu := {"c1nu"}
+	// command 2
+	c2eq := {"c2eq","c2eqn","c2en"}
+	c2fm := {"c2fm","c2fp"}
+	c2mo := {"c2mo","c2mn"}
+	c2sk := {"c2sk","c2sn"}
+	c2tr := {"c2tr","c2tn"}
+	c2fc := {"c2fc","c2fn"}
+	c2puc := {"c2puc","c2px","c2pn"}
+	c2md := {"c2md","c2mdn","c2mdd"}
+	c2rd := {"c2rd","c2rdd"}
+	c2mf := {"c2mf","c2mfn","c2mfd"}
+	c2nu := {"c2nu"}
+	// Conditional
+	ifac := {"ifac","ifacd"}
+	iblo := {"iblo"}
+	icp := {"icp","icpx","icpn"}
+	icnm := {"icnm","icnmd"}
+	iz := {"iz","izn"}
+	inot := {"inot"}
+	ifs := {"I","Ic","c1","c2"} ∪c2eq∪c2fm∪c2mo∪c2sk∪c2tr∪c2fc∪c2puc∪c2md∪c2rd∪c2mf∪c2nu∪c1eq∪c1fm∪c1mo∪c1sk∪c1tr∪c1fc∪c1puc∪c1md∪c1rd∪c1mf∪c1nu ∪ ifac ∪ iblo ∪ icp ∪ icnm ∪ iz ∪ inot
+	Q:= {0} ∪ comm ∪ rep ∪ defs ∪ ifs
+	
+	Σ:=toSet(A)  ∪ {' ', '\n'}
+	
+	Γ:={'1'}
+	q₀:=0
+	F:= {0}
+	M:=GPushdownAutomaton(Q,Σ,Γ,q₀,F)
+SkipChars := {' ', '\n'}   // this will only  be used when testing only the parser as the lexer removes  SkipChars
+	//transition for open and close  parenthesis astoplevel commands.You may use others for bllocks
+	
+	// Definition
+	
+	// Defvar
+	M.delta(0,"dfv","(V").push("1")
+	M.delta("dfv","dfvv",'v').ignore()
+	M.delta("dfvv","dfvn",'#').ignore()
+	M.delta("dfvn", 0,')').pop("1")
+	
+	// Defun
+	M.delta(0,0,")").pop("1")
+	M.delta(0,"defn","(E").push("1")
+	M.delta("defn","defnv","v").ignore()
+	M.delta("defnv","defnvs","(v").push("1")
+	M.delta("defnvs","defnvs","v").ignore()
+	M.delta("defnvs",0,")").pop("1")
+	// no params defun
+	M.delta("defnv",0,"()").ignore()
+	
+	// Commands Only
+	
+	// =
+	M.delta(0,"eq","(=").push("1")
+	M.delta("eq","eqn",'v').ignore()
+	M.delta("eqn","en",'#').ignore()
+	M.delta("en", 0,')').pop("1")
+	M.delta("en", 0,"))").pop("11") // used in defun
+	// funName
+	M.delta(0,"fm","(v").push("1")
+	M.delta("fm","fp",'#').ignore()
+	M.delta("fp","fp",'#').ignore()
+	M.delta("fp", 0,')').pop("1")
+	M.delta("fp", 0,"))").pop("11") // used in defun
+	// funName no params
+	M.delta("fm", 0,')').pop("1")
+	M.delta("fm", 0,"))").pop("11") // used in defun
+	// move
+	M.delta(0,"mo","(m").push("1")
+	M.delta("mo","mn",'#').ignore()
+	M.delta("mo","mn",'v').ignore()
+	M.delta("mn", 0,')').pop("1")
+	M.delta("mn", 0,"))").pop("11") // used in defun
+	// skip
+	M.delta(0,"sk","(S").push("1")
+	M.delta("sk","sn",'#').ignore()
+	M.delta("sk","sn",'v').ignore()
+	M.delta("sn", 0,')').pop("1")
+	M.delta("sn", 0,"))").pop("11") // used in defun
+	// turn
+	M.delta(0,"tr","(t").push("1")
+	M.delta("tr","tn",'r').ignore()
+	M.delta("tr","tn",'l').ignore()
+	M.delta("tr","tn",'a').ignore()
+	M.delta("tn", 0,')').pop("1")
+	M.delta("tn", 0,"))").pop("11") // used in defun
+	// face
+	M.delta(0,"fc","(F").push("1")
+	M.delta("fc","fn",'n').ignore()
+	M.delta("fc","fn",'s').ignore()
+	M.delta("fc","fn",'w').ignore()
+	M.delta("fc","fn",'e').ignore()
+	M.delta("fn", 0,')').pop("1")
+	M.delta("fn", 0,"))").pop("11") // used in defun
+	// put and pick
+	M.delta(0,"puc","(p").push("1")
+	M.delta("puc","px",'X').ignore()
+	M.delta("px","pn",'v').ignore()
+	M.delta("px","pn",'#').ignore()
+	M.delta("pn", 0,')').pop("1")
+	M.delta("pn", 0,"))").pop("11") // used in defun
+	// move-dir
+	M.delta(0,"md","(M").push("1")
+	M.delta("md","mdn",'v').ignore()
+	M.delta("md","mdn",'#').ignore()
+	M.delta("mdn","mdd",'f').ignore()
+	M.delta("mdn","mdd",'r').ignore()
+	M.delta("mdn","mdd",'l').ignore()
+	M.delta("mdn","mdd",'b').ignore()
+	M.delta("mdd", 0,')').pop("1")
+	M.delta("mdd", 0,"))").pop("11") // used in defun
+	// run-dirs
+	M.delta(0,"rd","(R").push("1")
+	M.delta("rd","rdd",'f').ignore()
+	M.delta("rd","rdd",'l').ignore()
+	M.delta("rd","rdd",'r').ignore()
+	M.delta("rd","rdd",'b').ignore()
+	M.delta("rdd","rdd",'f').ignore()
+	M.delta("rdd","rdd",'l').ignore()
+	M.delta("rdd","rdd",'r').ignore()
+	M.delta("rdd","rdd",'b').ignore()
+	M.delta("rdd", 0,')').pop("1")
+	M.delta("rdd", 0,"))").pop("11") // used in defun
+	// move-face
+	M.delta(0,"mf","(O").push("1")
+	M.delta("mf","mfn",'v').ignore()
+	M.delta("mf","mfn",'#').ignore()
+	M.delta("mfn","mfd",'n').ignore()
+	M.delta("mfn","mfd",'s').ignore()
+	M.delta("mfn","mfd",'e').ignore()
+	M.delta("mfn","mfd",'w').ignore()
+	M.delta("mfd", 0,')').pop("1")
+	M.delta("mfd", 0,"))").pop("11") // used in defun
+	// null
+	M.delta(0,"nu","(L").push("1")
+	M.delta("nu", 0,')').pop("1")
+	M.delta("nu", 0,"))").pop("11") // used in defun
+	
+	// Control Structures
+	// Loop
+	M.delta(0,"L","(o").push("1")
+	// Loop Condition facing
+	M.delta("L","lfac","(A").push("1")
+	M.delta("lfac","lfacd","n").ignore()
+	M.delta("lfac","lfacd","s").ignore()
+	M.delta("lfac","lfacd","w").ignore()
+	M.delta("lfac","lfacd","e").ignore()
+	M.delta("lfacd","Tn",")").pop("1") // shares path with RT
+	M.delta("lfacd","Tn","))").pop("11") // if it has a not conditional 
+	// Loop Condition blocked
+	M.delta("L","lblo","(B").push("1")
+	M.delta("lblo","Tn",")").pop("1") // shares path with RT
+	M.delta("lblo","Tn","))").pop("11") // if it has a not conditional 
+	// Loop Condition can-put and can-pick
+	M.delta("L","lcp","(P").push("1")
+	M.delta("lcp","lcpx","X").ignore()
+	M.delta("lcpx","lcpn","v").ignore()
+	M.delta("lcpx","lcpn","#").ignore()
+	M.delta("lcpn","Tn",")").pop("1") // shares path with RT
+	M.delta("lcpn","Tn","))").pop("11") // if it has a not conditional 
+	// Loop Condition can-move
+	M.delta("L","lcnm","(C").push("1")
+	M.delta("lcnm","lcnmd","n").ignore()
+	M.delta("lcnm","lcnmd","w").ignore()
+	M.delta("lcnm","lcnmd","e").ignore()
+	M.delta("lcnm","lcnmd","s").ignore()
+	M.delta("lcnmd","Tn",")").pop("1") // shares path with RT
+	M.delta("lcnmd","Tn","))").pop("11") // if it has a not conditional
+	// Loop Condition can-move
+	M.delta("L","lz","(Z").push("1")
+	M.delta("lz","lzn","#").ignore()
+	M.delta("lz","lzn","v").ignore()
+	M.delta("lz","Tn",")").pop("1") // shares path with RT
+	M.delta("lz","Tn","))").pop("11") // if it has a not conditional
+	// Loop Condition not
+	M.delta("L","lnot","(N").push("1")
+	M.delta("lnot","lfac","(A").push("1")
+	M.delta("lnot","lblo","(B").push("1")
+	M.delta("lnot","lcp","(P").push("1")
+	M.delta("lnot","lcnm","(C").push("1")
+	M.delta("lnot","lz","(Z").push("1")
+	
+	// RepeatTimes
+	M.delta(0,"T","(T").push("1")
+	M.delta("T","Tn","v").ignore()
+	M.delta("T","Tn","#").ignore()
+	M.delta("Tf",0,")").pop("1")
+	M.delta("Tf",0,"))").pop("11") // used in defun
+	// = RT
+	M.delta("Tn","req","(=").push("1")
+	M.delta("req","reqn",'v').ignore()
+	M.delta("reqn","ren",'#').ignore()
+	M.delta("ren", "Tf",')').pop("1")
+	// funName RT
+	M.delta("Tn","rfm","(v").push("1")
+	M.delta("rfm","rfp",'#').ignore()
+	M.delta("rfp","rfp",'#').ignore()
+	M.delta("rfp", "Tf",')').pop("1")
+	// funName no params RT
+	M.delta("rfm", 0,')').pop("1")
+	M.delta("rfm", 0,"))").pop("11") // used in defun
+	// move RT
+	M.delta("Tn","rmo","(m").push("1")
+	M.delta("rmo","rmn",'#').ignore()
+	M.delta("rmo","rmn",'v').ignore()
+	M.delta("rmn", "Tf",')').pop("1")
+	// skip RT
+	M.delta("Tn","rsk","(S").push("1")
+	M.delta("rsk","rsn",'#').ignore()
+	M.delta("rsk","rsn",'v').ignore()
+	M.delta("rsn", "Tf",')').pop("1")
+	// turn RT
+	M.delta("Tn","rtr","(t").push("1")
+	M.delta("rtr","rtn",'r').ignore()
+	M.delta("rtr","rtn",'l').ignore()
+	M.delta("rtr","rtn",'a').ignore()
+	M.delta("rtn", "Tf",')').pop("1")
+	// face RT
+	M.delta("Tn","rfc","(F").push("1")
+	M.delta("rfc","rfn",'n').ignore()
+	M.delta("rfc","rfn",'s').ignore()
+	M.delta("rfc","rfn",'w').ignore()
+	M.delta("rfc","rfn",'e').ignore()
+	M.delta("rfn", "Tf",')').pop("1")
+	// put and pick RT
+	M.delta("Tn","rpuc","(p").push("1")
+	M.delta("rpuc","rpx",'X').ignore()
+	M.delta("rpx","rpn",'v').ignore()
+	M.delta("rpx","rpn",'#').ignore()
+	M.delta("rpn", "Tf",')').pop("1")
+	// move-dir RT
+	M.delta("Tn","rmd","(M").push("1")
+	M.delta("rmd","rmdn",'v').ignore()
+	M.delta("rmd","rmdn",'#').ignore()
+	M.delta("rmdn","rmdd",'f').ignore()
+	M.delta("rmdn","rmdd",'r').ignore()
+	M.delta("rmdn","rmdd",'l').ignore()
+	M.delta("rmdn","rmdd",'b').ignore()
+	M.delta("rmdd", "Tf",')').pop("1")
+	// run-dirs RT
+	M.delta("Tn","rrd","(R").push("1")
+	M.delta("rrd","rrdd",'f').ignore()
+	M.delta("rrd","rrdd",'l').ignore()
+	M.delta("rrd","rrdd",'r').ignore()
+	M.delta("rrd","rrdd",'b').ignore()
+	M.delta("rrdd","rrdd",'f').ignore()
+	M.delta("rrdd","rrdd",'l').ignore()
+	M.delta("rrdd","rrdd",'r').ignore()
+	M.delta("rrdd","rrdd",'b').ignore()
+	M.delta("rrdd", "Tf",')').pop("1")
+	// move-face RT
+	M.delta("Tn","rmf","(O").push("1")
+	M.delta("rmf","rmfn",'v').ignore()
+	M.delta("rmf","rmfn",'#').ignore()
+	M.delta("rmfn","rmfd",'n').ignore()
+	M.delta("rmfn","rmfd",'s').ignore()
+	M.delta("rmfn","rmfd",'e').ignore()
+	M.delta("rmfn","rmfd",'w').ignore()
+	M.delta("rmfd", "Tf",')').pop("1")
+	// null RT
+	M.delta("Tn","rnu","(L").push("1")
+	M.delta("rnu", "Tf",')').pop("1")
+	
+	// If conditional
+	M.delta(0,"I","(i").push("1")
+	M.delta("c2",0,")").pop("1")
+	M.delta("c2",0,"))").pop("11") // used in defun
+	// If Condition facing
+	M.delta("I","ifac","(A").push("1")
+	M.delta("ifac","ifacd","n").ignore()
+	M.delta("ifac","ifacd","s").ignore()
+	M.delta("ifac","ifacd","w").ignore()
+	M.delta("ifac","ifacd","e").ignore()
+	M.delta("ifacd","Ic",")").pop("1") // shares path with RT
+	M.delta("ifacd","Ic","))").pop("11") // if it has a not conditional 
+	// If Condition blocked
+	M.delta("I","iblo","(B").push("1")
+	M.delta("iblo","Ic",")").pop("1") // shares path with RT
+	M.delta("iblo","Ic","))").pop("11") // if it has a not conditional 
+	// If Condition can-put and can-pick
+	M.delta("I","icp","(P").push("1")
+	M.delta("icp","icpx","X").ignore()
+	M.delta("icpx","icpn","v").ignore()
+	M.delta("icpx","icpn","#").ignore()
+	M.delta("icpn","Ic",")").pop("1") // shares path with RT
+	M.delta("icpn","Ic","))").pop("11") // if it has a not conditional 
+	// If Condition can-move
+	M.delta("I","icnm","(C").push("1")
+	M.delta("icnm","icnmd","n").ignore()
+	M.delta("icnm","icnmd","w").ignore()
+	M.delta("icnm","icnmd","e").ignore()
+	M.delta("icnm","icnmd","s").ignore()
+	M.delta("icnmd","Ic",")").pop("1") // shares path with RT
+	M.delta("icnmd","Ic","))").pop("11") // if it has a not conditional
+	// If Condition can-move
+	M.delta("I","iz","(Z").push("1")
+	M.delta("iz","izn","#").ignore()
+	M.delta("iz","izn","v").ignore()
+	M.delta("iz","Ic",")").pop("1") // shares path with RT
+	M.delta("iz","Ic","))").pop("11") // if it has a not conditional
+	// If Condition not
+	M.delta("I","inot","(N").push("1")
+	M.delta("inot","ifac","(A").push("1")
+	M.delta("inot","iblo","(B").push("1")
+	M.delta("inot","icp","(P").push("1")
+	M.delta("inot","icnm","(C").push("1")
+	M.delta("inot","iz","(Z").push("1")
+	// command 1
+	// = command 1
+	M.delta("Ic","c1eq","(=").push("1")
+	M.delta("c1eq","c1eqn",'v').ignore()
+	M.delta("c1eqn","c1en",'#').ignore()
+	M.delta("c1en","c1",')').pop("1")
+	// funName  command 1
+	M.delta("Ic","c1fm","(v").push("1")
+	M.delta("c1fm","c1fp",'#').ignore()
+	M.delta("c1fp","c1fp",'#').ignore()
+	M.delta("c1fp", "c1",')').pop("1")
+	// funName no params cm1
+	M.delta("c1fm", 0,')').pop("1")
+	M.delta("c1fm", 0,"))").pop("11") // used in defun
+	// move  command 1
+	M.delta("Ic","c1mo","(m").push("1")
+	M.delta("c1mo","c1mn",'#').ignore()
+	M.delta("c1mo","c1mn",'v').ignore()
+	M.delta("c1mn", "c1",')').pop("1")
+	// skip  command 1
+	M.delta("Ic","c1sk","(S").push("1")
+	M.delta("c1sk","c1sn",'#').ignore()
+	M.delta("c1sk","c1sn",'v').ignore()
+	M.delta("c1sn", "c1",')').pop("1")
+	// turn  command 1
+	M.delta("Ic","c1tr","(t").push("1")
+	M.delta("c1tr","c1tn",'r').ignore()
+	M.delta("c1tr","c1tn",'l').ignore()
+	M.delta("c1tr","c1tn",'a').ignore()
+	M.delta("c1tn", "c1",')').pop("1")
+	// face  command 1
+	M.delta("Ic","c1fc","(F").push("1")
+	M.delta("c1fc","c1fn",'n').ignore()
+	M.delta("c1fc","c1fn",'s').ignore()
+	M.delta("c1fc","c1fn",'w').ignore()
+	M.delta("c1fc","c1fn",'e').ignore()
+	M.delta("c1fn", "c1",')').pop("1")
+	// put and pick  command 1
+	M.delta("Ic","c1puc","(p").push("1")
+	M.delta("c1puc","c1px",'X').ignore()
+	M.delta("c1px","c1pn",'v').ignore()
+	M.delta("c1px","c1pn",'#').ignore()
+	M.delta("c1pn", "c1",')').pop("1")
+	// move-dir  command 1
+	M.delta("Ic","c1md","(M").push("1")
+	M.delta("c1md","c1mdn",'v').ignore()
+	M.delta("c1md","c1mdn",'#').ignore()
+	M.delta("c1mdn","c1mdd",'f').ignore()
+	M.delta("c1mdn","c1mdd",'r').ignore()
+	M.delta("c1mdn","c1mdd",'l').ignore()
+	M.delta("c1mdn","c1mdd",'b').ignore()
+	M.delta("c1mdd", "c1",')').pop("1")
+	// run-dirs  command 1
+	M.delta("Ic","c1rd","(R").push("1")
+	M.delta("c1rd","c1rdd",'f').ignore()
+	M.delta("c1rd","c1rdd",'l').ignore()
+	M.delta("c1rd","c1rdd",'r').ignore()
+	M.delta("c1rd","c1rdd",'b').ignore()
+	M.delta("c1rdd","c1rdd",'f').ignore()
+	M.delta("c1rdd","c1rdd",'l').ignore()
+	M.delta("c1rdd","c1rdd",'r').ignore()
+	M.delta("c1rdd","c1rdd",'b').ignore()
+	M.delta("c1rdd", "c1",')').pop("1")
+	// move-face  command 1
+	M.delta("Ic","c1mf","(O").push("1")
+	M.delta("c1mf","c1mfn",'v').ignore()
+	M.delta("c1mf","c1mfn",'#').ignore()
+	M.delta("c1mfn","c1mfd",'n').ignore()
+	M.delta("c1mfn","c1mfd",'s').ignore()
+	M.delta("c1mfn","c1mfd",'e').ignore()
+	M.delta("c1mfn","c1mfd",'w').ignore()
+	M.delta("c1mfd", "c1",')').pop("1")
+	// null  command 1
+	M.delta("Ic","c1nu","(L").push("1")
+	M.delta("c1nu", "c1",')').pop("1")
+	// command 2
+	// = command 2
+	M.delta("c1","c2eq","(=").push("1")
+	M.delta("c2eq","c2eqn",'v').ignore()
+	M.delta("c2eqn","c2en",'#').ignore()
+	M.delta("c2en", "c2",')').pop("1")
+	// funName command 2
+	M.delta("c1","c2fm","(v").push("1")
+	M.delta("c2fm","c2fp",'#').ignore()
+	M.delta("c2fp","c2fp",'#').ignore()
+	M.delta("c2fp", "c2",')').pop("1")
+	// funName no params c2
+	M.delta("c2fm", 0,')').pop("1")
+	M.delta("c2fm", 0,"))").pop("11") // used in defun
+	// move command 2
+	M.delta("c1","c2mo","(m").push("1")
+	M.delta("c2mo","c2mn",'#').ignore()
+	M.delta("c2mo","c2mn",'v').ignore()
+	M.delta("c2mn", "c2",')').pop("1")
+	// skip command 2
+	M.delta("c1","c2sk","(S").push("1")
+	M.delta("c2sk","c2sn",'#').ignore()
+	M.delta("c2sk","c2sn",'v').ignore()
+	M.delta("c2sn", "c2",')').pop("1")
+	// turn command 2
+	M.delta("c1","c2tr","(t").push("1")
+	M.delta("c2tr","c2tn",'r').ignore()
+	M.delta("c2tr","c2tn",'l').ignore()
+	M.delta("c2tr","c2tn",'a').ignore()
+	M.delta("c2tn", "c2",')').pop("1")
+	// face command 2
+	M.delta("c1","c2fc","(F").push("1")
+	M.delta("c2fc","c2fn",'n').ignore()
+	M.delta("c2fc","c2fn",'s').ignore()
+	M.delta("c2fc","c2fn",'w').ignore()
+	M.delta("c2fc","c2fn",'e').ignore()
+	M.delta("c2fn", "c2",')').pop("1")
+	// put and pick command 2
+	M.delta("c1","c2puc","(p").push("1")
+	M.delta("c2puc","c2px",'X').ignore()
+	M.delta("c2px","c2pn",'v').ignore()
+	M.delta("c2px","c2pn",'#').ignore()
+	M.delta("c2pn", "c2",')').pop("1")
+	// move-dir command 2
+	M.delta("c1","c2md","(M").push("1")
+	M.delta("c2md","c2mdn",'v').ignore()
+	M.delta("c2md","c2mdn",'#').ignore()
+	M.delta("c2mdn","c2mdd",'f').ignore()
+	M.delta("c2mdn","c2mdd",'r').ignore()
+	M.delta("c2mdn","c2mdd",'l').ignore()
+	M.delta("c2mdn","c2mdd",'b').ignore()
+	M.delta("c2mdd", "c2",')').pop("1")
+	// run-dirs command 2
+	M.delta("c1","c2rd","(R").push("1")
+	M.delta("c2rd","c2rdd",'f').ignore()
+	M.delta("c2rd","c2rdd",'l').ignore()
+	M.delta("c2rd","c2rdd",'r').ignore()
+	M.delta("c2rd","c2rdd",'b').ignore()
+	M.delta("c2rdd","c2rdd",'f').ignore()
+	M.delta("c2rdd","c2rdd",'l').ignore()
+	M.delta("c2rdd","c2rdd",'r').ignore()
+	M.delta("c2rdd","c2rdd",'b').ignore()
+	M.delta("c2rdd", "c2",')').pop("1")
+	// move-face command 2
+	M.delta("c1","c2mf","(O").push("1")
+	M.delta("c2mf","c2mfn",'v').ignore()
+	M.delta("c2mf","c2mfn",'#').ignore()
+	M.delta("c2mfn","c2mfd",'n').ignore()
+	M.delta("c2mfn","c2mfd",'s').ignore()
+	M.delta("c2mfn","c2mfd",'e').ignore()
+	M.delta("c2mfn","c2mfd",'w').ignore()
+	M.delta("c2mfd", "c2",')').pop("1")
+	// null command 2
+	M.delta("c1","c2nu","(L").push("1")
+	M.delta("c2nu", "c2",')').pop("1")
+	
+	
+ for each q in Q do
+ 	for each s in SkipChars do
+ 	   M.delta(q,q,λ+s).ignore()
+ end
+ end
+
+
+return M
+end
+
